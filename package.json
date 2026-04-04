@@ -1,0 +1,47 @@
+{
+  "name": "vscode-workato",
+  "displayName": "Workato Recipe Viewer",
+  "description": "Improves readability of Workato recipe JSON files with a visual flow view",
+  "version": "0.0.1",
+  "publisher": "ryotaro",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.recipe.json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "workato.openReadableView",
+        "title": "Workato: Open Readable View",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "workato.openReadableView",
+          "when": "resourceFilename =~ /\\.recipe\\.json$/",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

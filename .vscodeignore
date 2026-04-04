@@ -1,0 +1,6 @@
+src/**
+node_modules/**
+.claude/**
+tsconfig.json
+**/*.map
+samples/**
