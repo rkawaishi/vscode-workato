@@ -51,11 +51,11 @@ export class RecipeWebviewPanel {
 
 // Colors matching stepCodeLens decoration types
 const COLORS: Record<string, { bg: string; fg: string }> = {
-  trigger: { bg: 'rgba(229, 192, 123, 0.7)', fg: '#e5c07b' },
-  action:  { bg: 'rgba(97, 175, 239, 0.6)',  fg: '#61afef' },
-  foreach: { bg: 'rgba(198, 120, 221, 0.6)', fg: '#c678dd' },
-  try:     { bg: 'rgba(86, 182, 194, 0.6)',  fg: '#56b6c2' },
-  catch:   { bg: 'rgba(224, 108, 117, 0.6)', fg: '#e06c75' },
+  trigger: { bg: '#3d3529', fg: '#e5c07b' },
+  action:  { bg: '#252f3a', fg: '#61afef' },
+  foreach: { bg: '#332838', fg: '#c678dd' },
+  try:     { bg: '#253235', fg: '#56b6c2' },
+  catch:   { bg: '#382828', fg: '#e06c75' },
 };
 
 function renderHtml(recipe: RecipeModel): string {
