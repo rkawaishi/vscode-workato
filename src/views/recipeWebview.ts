@@ -49,6 +49,15 @@ export class RecipeWebviewPanel {
   }
 }
 
+// Colors matching stepCodeLens decoration types
+const COLORS: Record<string, { bg: string; fg: string }> = {
+  trigger: { bg: 'rgba(229, 192, 123, 0.15)', fg: '#e5c07b' },
+  action:  { bg: 'rgba(97, 175, 239, 0.12)',  fg: '#61afef' },
+  foreach: { bg: 'rgba(198, 120, 221, 0.12)', fg: '#c678dd' },
+  try:     { bg: 'rgba(86, 182, 194, 0.12)',  fg: '#56b6c2' },
+  catch:   { bg: 'rgba(224, 108, 117, 0.12)', fg: '#e06c75' },
+};
+
 function renderHtml(recipe: RecipeModel): string {
   const connections = recipe.connections
     .map(c => `<span class="tag">${esc(c.provider)}: ${esc(c.name)}</span>`)
@@ -81,9 +90,11 @@ function renderHtml(recipe: RecipeModel): string {
   .flow { list-style: none; padding: 0; margin: 0; }
   .flow li {
     position: relative;
-    padding: 6px 0 6px 24px;
+    padding: 6px 8px 6px 24px;
     border-left: 2px solid var(--vscode-panel-border, #444);
     margin-left: 8px;
+    border-radius: 3px;
+    margin-bottom: 2px;
   }
   .flow li:last-child { border-left-color: transparent; }
   .flow li::before {
@@ -93,10 +104,20 @@ function renderHtml(recipe: RecipeModel): string {
     width: 16px;
     border-top: 2px solid var(--vscode-panel-border, #444);
   }
-  .kw { font-size: 0.7em; font-weight: 700; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; margin-right: 6px; }
-  .kw-trigger { background: #e5c07b; color: #1e1e1e; }
-  .kw-action { background: #61afef; color: #1e1e1e; }
-  .kw-foreach { background: #c678dd; color: #1e1e1e; }
+  .step-label {
+    font-size: 0.7em;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-right: 6px;
+    display: inline-block;
+  }
+  .step-num {
+    font-size: 0.8em;
+    font-weight: 700;
+    margin-right: 4px;
+  }
   .comment { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
   .nested { margin-top: 4px; }
 </style>
@@ -113,16 +134,39 @@ function renderHtml(recipe: RecipeModel): string {
 }
 
 function renderStep(step: RecipeStep): string {
-  const kwClass = step.keyword === 'trigger' ? 'kw-trigger' : step.keyword === 'foreach' ? 'kw-foreach' : 'kw-action';
+  const kw = step.keyword;
+  const color = COLORS[kw] || COLORS.action;
   const label = step.provider ? `${step.provider} / ${step.name}` : step.name;
   const comment = step.comment ? ` <span class="comment">— ${esc(step.comment)}</span>` : '';
+
+  let icon: string;
+  let kwLabel: string;
+  if (kw === 'trigger') {
+    icon = '⚡';
+    kwLabel = 'TRIGGER';
+  } else if (kw === 'foreach') {
+    icon = '🔄';
+    kwLabel = 'LOOP';
+  } else if (kw === 'try') {
+    icon = '🛡';
+    kwLabel = 'TRY';
+  } else if (kw === 'catch') {
+    icon = '🚨';
+    kwLabel = 'CATCH';
+  } else {
+    icon = '▶';
+    kwLabel = 'ACTION';
+  }
+
+  const stepNum = `<span class="step-num" style="color:${color.fg}">Step ${step.number}</span>`;
 
   const children = step.children.length > 0
     ? `<ul class="flow nested">${step.children.map(c => renderStep(c)).join('')}</ul>`
     : '';
 
-  return `<li>
-    <span class="kw ${kwClass}">${esc(step.keyword)}</span>
+  return `<li style="background:${color.bg}">
+    <span class="step-label" style="background:${color.fg}; color:#1e1e1e;">${icon} ${kwLabel}</span>
+    ${stepNum}
     <strong>${esc(label)}</strong>${comment}
     ${children}
   </li>`;
