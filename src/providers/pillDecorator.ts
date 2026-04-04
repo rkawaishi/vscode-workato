@@ -49,7 +49,14 @@ function updateDecorations(editor: vscode.TextEditor): void {
 
   while ((match = PILL_REGEX.exec(text)) !== null) {
     const fullMatch = match[0];
-    const jsonPayload = match[1].replace(/\\'/g, "'");
+    // The payload is inside a JSON string, so \" represents literal "
+    // Unescape JSON string escapes before parsing
+    let jsonPayload: string;
+    try {
+      jsonPayload = JSON.parse(`"${match[1]}"`);
+    } catch {
+      continue;
+    }
 
     const startPos = editor.document.positionAt(match.index);
     const endPos = editor.document.positionAt(match.index + fullMatch.length);
