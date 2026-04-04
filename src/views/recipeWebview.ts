@@ -67,6 +67,7 @@ function renderHtml(recipe: RecipeModel): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
   body {
     font-family: var(--vscode-font-family, sans-serif);
