@@ -1,16 +1,11 @@
 import * as vscode from 'vscode';
 
+const KEYWORD_REGEX = /"keyword"\s*:\s*"(trigger|action|foreach)"/g;
 const PROVIDER_REGEX = /"provider"\s*:\s*"([^"]+)"/;
 const NAME_REGEX = /"name"\s*:\s*"([^"]+)"/;
 const MNEMONIC_REGEX = /"mnemonic"\s*:\s*"([^"]+)"/;
 const COMMENT_REGEX = /"comment"\s*:\s*"([^"]+)"/;
 const NUMBER_REGEX = /"number"\s*:\s*(\d+)/;
-
-interface StepInfo {
-  braceOffset: number;
-  keyword: string;
-  blockText: string;
-}
 
 class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
   provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
@@ -19,22 +14,39 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const text = document.getText();
-    const steps = findSteps(text);
-    const lenses: vscode.CodeLens[] = [];
 
-    for (const step of steps) {
-      const provider = PROVIDER_REGEX.exec(step.blockText)?.[1] || '';
-      const mnemonic = MNEMONIC_REGEX.exec(step.blockText)?.[1];
-      const name = NAME_REGEX.exec(step.blockText)?.[1] || '';
-      const comment = COMMENT_REGEX.exec(step.blockText)?.[1] || '';
-      const number = NUMBER_REGEX.exec(step.blockText)?.[1];
+    // Pass 1: build a brace stack map — for each offset, track enclosing { offset
+    const braceMap = buildBraceMap(text);
+
+    // Pass 2: find "keyword" matches and look up their enclosing {
+    const lenses: vscode.CodeLens[] = [];
+    let match: RegExpExecArray | null;
+    KEYWORD_REGEX.lastIndex = 0;
+
+    while ((match = KEYWORD_REGEX.exec(text)) !== null) {
+      const keyword = match[1];
+      // match.index is at the opening " which is a string delimiter,
+      // so look up the character just before it (whitespace/newline)
+      const braceOffset = braceMap.get(match.index - 1);
+      if (braceOffset === undefined) {
+        continue;
+      }
+
+      // Extract text from the brace for metadata search
+      const blockText = text.substring(braceOffset, Math.min(text.length, match.index + 500));
+
+      const provider = PROVIDER_REGEX.exec(blockText)?.[1] || '';
+      const mnemonic = MNEMONIC_REGEX.exec(blockText)?.[1];
+      const name = NAME_REGEX.exec(blockText)?.[1] || '';
+      const comment = COMMENT_REGEX.exec(blockText)?.[1] || '';
+      const number = NUMBER_REGEX.exec(blockText)?.[1];
 
       const displayName = mnemonic || name;
 
       let label: string;
-      if (step.keyword === 'trigger') {
+      if (keyword === 'trigger') {
         label = `━━━ ⚡ TRIGGER: ${provider} / ${displayName} ━━━`;
-      } else if (step.keyword === 'foreach') {
+      } else if (keyword === 'foreach') {
         label = `━━━ 🔄 LOOP (Step ${number ?? '?'}) ━━━`;
       } else {
         label = `━━━ Step ${number ?? '?'}: ${provider} / ${displayName} ━━━`;
@@ -44,7 +56,7 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
         label += `  « ${comment} »`;
       }
 
-      const bracePos = document.positionAt(step.braceOffset);
+      const bracePos = document.positionAt(braceOffset);
       const range = new vscode.Range(bracePos, bracePos);
       lenses.push(new vscode.CodeLens(range, {
         title: label,
@@ -57,12 +69,12 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
 }
 
 /**
- * Forward-scan to find all step objects and their opening brace positions.
- * Tracks brace nesting to correctly identify the { that starts each step.
+ * Forward-scan through JSON text to build a map from character offsets
+ * to their immediately enclosing { offset.
+ * Only maps offsets that are inside an object (not inside a string).
  */
-function findSteps(text: string): StepInfo[] {
-  const steps: StepInfo[] = [];
-  // Stack of { offsets at each nesting level
+function buildBraceMap(text: string): Map<number, number> {
+  const map = new Map<number, number>();
   const braceStack: number[] = [];
   let inString = false;
   let escape = false;
@@ -95,31 +107,13 @@ function findSteps(text: string): StepInfo[] {
       braceStack.pop();
     }
 
-    // Check if we're at a "keyword" field
-    if (ch === '"' || text.substring(i, i + 9) !== '"keyword"') {
-      continue;
+    // Record the enclosing brace for this non-string offset
+    if (braceStack.length > 0) {
+      map.set(i, braceStack[braceStack.length - 1]);
     }
-
-    // Found "keyword" - check if it matches trigger/action/foreach
-    const afterKey = text.substring(i + 9, i + 50);
-    const keywordMatch = /^\s*:\s*"(trigger|action|foreach)"/.exec(afterKey);
-    if (!keywordMatch) {
-      continue;
-    }
-
-    const keyword = keywordMatch[1];
-    // The current top of braceStack is the { that contains this keyword
-    const braceOffset = braceStack[braceStack.length - 1];
-    if (braceOffset === undefined) {
-      continue;
-    }
-
-    // Extract a chunk of text from the brace to ~1000 chars ahead for metadata
-    const blockText = text.substring(braceOffset, Math.min(text.length, i + 500));
-    steps.push({ braceOffset, keyword, blockText });
   }
 
-  return steps;
+  return map;
 }
 
 export function activateStepCodeLens(context: vscode.ExtensionContext): void {
