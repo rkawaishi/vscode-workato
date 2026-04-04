@@ -1,8 +1,9 @@
 import { PillRef, ResolvedInput } from '../types/workato';
 
 const PILL_PATTERN = /#\{_dp\('(.+?)'\)\}/g;
+const BARE_PILL_PATTERN = /=_dp\('(.+?)'\)(?:\.[a-zA-Z_]\w*(?:\([^)]*\))*)*/g;
 const FORMULA_PATTERN = /#\{_\('([^']+)'\)(?:[^}]*)?\}/g;
-const RUBY_FORMULA_PATTERN = /=_\('([^']+)'\)(?:\.[a-zA-Z_]\w*)*/g;
+const RUBY_FORMULA_PATTERN = /=_\('([^']+)'\)(?:\.[a-zA-Z_]\w*(?:\([^)]*\))*)*/g;
 
 /**
  * Parse a single _dp() JSON payload into a PillRef.
@@ -57,8 +58,18 @@ export function resolveValue(value: unknown): ResolvedInput {
     return { key: '', displayValue: rawValue, rawValue, references };
   }
 
-  // Handle _dp() pills
+  // Handle #{_dp()} pills
   let displayValue = value.replace(PILL_PATTERN, (_match, jsonStr) => {
+    const ref = parsePillPayload(jsonStr);
+    if (ref) {
+      references.push(ref);
+      return formatPillRef(ref);
+    }
+    return _match;
+  });
+
+  // Handle =_dp() pills (bare, without #{} wrapping)
+  displayValue = displayValue.replace(BARE_PILL_PATTERN, (_match, jsonStr) => {
     const ref = parsePillPayload(jsonStr);
     if (ref) {
       references.push(ref);
