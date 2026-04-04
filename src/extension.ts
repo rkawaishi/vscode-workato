@@ -5,12 +5,14 @@ import { RawRecipe } from './types/workato';
 import { activatePillDecorator } from './providers/pillDecorator';
 import { activateStepCodeLens } from './providers/stepCodeLens';
 import { activateMetadataFolding } from './providers/metadataFolding';
+import { activateCodeDecorator } from './providers/codeDecorator';
 
 export function activate(context: vscode.ExtensionContext): void {
   // Register inline enhancements for .recipe.json files
   activatePillDecorator(context);
   activateStepCodeLens(context);
   activateMetadataFolding(context);
+  activateCodeDecorator(context);
 
   // Manual command to open readable view
   const command = vscode.commands.registerCommand(
