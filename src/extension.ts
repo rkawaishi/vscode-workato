@@ -2,11 +2,20 @@ import * as vscode from 'vscode';
 import { parseRecipe } from './parsers/recipe';
 import { RecipeWebviewPanel } from './views/recipeWebview';
 import { RawRecipe } from './types/workato';
+import { activatePillDecorator } from './providers/pillDecorator';
+import { activateStepCodeLens } from './providers/stepCodeLens';
+import { activateMetadataFolding } from './providers/metadataFolding';
 
 export function activate(context: vscode.ExtensionContext): void {
+  // Register inline enhancements for .recipe.json files
+  activatePillDecorator(context);
+  activateStepCodeLens(context);
+  activateMetadataFolding(context);
+
+  // Manual command to open readable view
   const command = vscode.commands.registerCommand(
     'workato.openReadableView',
-    () => openReadableView(),
+    () => openReadableViewManual(),
   );
 
   // Auto-open readable view when a .recipe.json file is opened
@@ -17,16 +26,16 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   });
 
-  // Also handle already-open editors at activation time
   const activeEditor = vscode.window.activeTextEditor;
   if (activeEditor?.document.uri.fsPath.endsWith('.recipe.json')) {
-    setTimeout(() => openReadableView(), 300);
+    const targetUri = activeEditor.document.uri;
+    setTimeout(() => openReadableViewForUri(targetUri), 300);
   }
 
   context.subscriptions.push(command, onDidOpen);
 }
 
-async function openReadableView(): Promise<void> {
+async function openReadableViewManual(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage('No active editor. Open a .recipe.json file first.');
