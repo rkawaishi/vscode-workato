@@ -4,10 +4,9 @@ import { PillRef } from '../types/workato';
 
 const PILL_REGEX = /#\{_dp\('((?:[^'\\]|\\.)*)'\)\}/g;
 
-// Hide the raw _dp() text
+// Hide the raw _dp() text by collapsing it to zero width
 const hideDecorationType = vscode.window.createTextEditorDecorationType({
-  opacity: '0',
-  letterSpacing: '-0.5em',
+  textDecoration: 'none; font-size: 0;',
 });
 
 // Show the readable reference as replacement
