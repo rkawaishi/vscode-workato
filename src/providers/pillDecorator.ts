@@ -1,21 +1,28 @@
 import * as vscode from 'vscode';
 import { parsePillPayload, formatPillRef } from '../parsers/pill';
+import { PillRef } from '../types/workato';
 
 const PILL_REGEX = /#\{_dp\('((?:[^'\\]|\\.)*)'\)\}/g;
 
-const dimDecorationType = vscode.window.createTextEditorDecorationType({
-  opacity: '0.3',
+// Hide the raw _dp() text
+const hideDecorationType = vscode.window.createTextEditorDecorationType({
+  opacity: '0',
+  letterSpacing: '-0.5em',
 });
 
-const hintDecorationType = vscode.window.createTextEditorDecorationType({
-  after: {
-    color: new vscode.ThemeColor('editorCodeLens.foreground'),
-    fontStyle: 'italic',
-  },
-});
+// Show the readable reference as replacement
+const replaceDecorationType = vscode.window.createTextEditorDecorationType({});
+
+interface PillLocation {
+  range: vscode.Range;
+  ref: PillRef;
+  raw: string;
+}
+
+// Shared state for hover provider
+let currentPills: PillLocation[] = [];
 
 export function activatePillDecorator(context: vscode.ExtensionContext): void {
-  // Decorate active editor
   if (vscode.window.activeTextEditor) {
     updateDecorations(vscode.window.activeTextEditor);
   }
@@ -32,25 +39,47 @@ export function activatePillDecorator(context: vscode.ExtensionContext): void {
         updateDecorations(editor);
       }
     }),
+    // Hover provider: show original _dp() content on hover
+    vscode.languages.registerHoverProvider(
+      { pattern: '**/*.recipe.json' },
+      {
+        provideHover(document, position) {
+          for (const pill of currentPills) {
+            if (pill.range.contains(position)) {
+              const readable = formatPillRef(pill.ref);
+              const md = new vscode.MarkdownString();
+              md.appendMarkdown(`**${readable}**\n\n`);
+              md.appendMarkdown(`- **Provider:** \`${pill.ref.provider}\`\n`);
+              md.appendMarkdown(`- **Step:** \`${pill.ref.stepAlias}\`\n`);
+              md.appendMarkdown(`- **Path:** \`${pill.ref.path.join('.')}\`\n\n`);
+              md.appendMarkdown('---\n');
+              md.appendCodeblock(pill.raw, 'json');
+              return new vscode.Hover(md, pill.range);
+            }
+          }
+          return null;
+        },
+      },
+    ),
   );
 }
 
 function updateDecorations(editor: vscode.TextEditor): void {
   if (!editor.document.uri.fsPath.endsWith('.recipe.json')) {
+    currentPills = [];
     return;
   }
 
   const text = editor.document.getText();
-  const dimRanges: vscode.DecorationOptions[] = [];
-  const hintRanges: vscode.DecorationOptions[] = [];
+  const hideRanges: vscode.DecorationOptions[] = [];
+  const replaceRanges: vscode.DecorationOptions[] = [];
+  const pills: PillLocation[] = [];
 
   let match: RegExpExecArray | null;
   PILL_REGEX.lastIndex = 0;
 
   while ((match = PILL_REGEX.exec(text)) !== null) {
     const fullMatch = match[0];
-    // The payload is inside a JSON string, so \" represents literal "
-    // Unescape JSON string escapes before parsing
     let jsonPayload: string;
     try {
       jsonPayload = JSON.parse(`"${match[1]}"`);
@@ -66,21 +95,26 @@ function updateDecorations(editor: vscode.TextEditor): void {
     if (ref) {
       const readable = formatPillRef(ref);
 
-      // Dim the raw _dp() text
-      dimRanges.push({ range });
+      pills.push({ range, ref, raw: fullMatch });
 
-      // Show readable hint after the dimmed text
-      hintRanges.push({
+      // Hide the raw _dp() text
+      hideRanges.push({ range });
+
+      // Show readable reference as after-text on the range
+      replaceRanges.push({
         range,
         renderOptions: {
           after: {
-            contentText: ` → ${readable}`,
+            contentText: readable,
+            color: new vscode.ThemeColor('textLink.foreground'),
+            fontStyle: 'normal',
           },
         },
       });
     }
   }
 
-  editor.setDecorations(dimDecorationType, dimRanges);
-  editor.setDecorations(hintDecorationType, hintRanges);
+  currentPills = pills;
+  editor.setDecorations(hideDecorationType, hideRanges);
+  editor.setDecorations(replaceDecorationType, replaceRanges);
 }
