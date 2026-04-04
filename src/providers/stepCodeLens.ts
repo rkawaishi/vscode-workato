@@ -21,16 +21,15 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
 
     while ((match = KEYWORD_REGEX.exec(text)) !== null) {
       const keyword = match[1];
-      const pos = document.positionAt(match.index);
 
-      // Search the surrounding block for provider, name, number, comment
-      const blockStart = text.lastIndexOf('{', match.index);
-      const blockEnd = text.indexOf('}', match.index + match[0].length);
+      // Find the opening { of this step object
+      const blockStart = findEnclosingBrace(text, match.index);
       if (blockStart === -1) {
         continue;
       }
-      // Expand search a bit further for nested fields
-      const searchEnd = Math.min(text.length, blockEnd + 500);
+
+      // Search forward from block start for step metadata
+      const searchEnd = Math.min(text.length, match.index + 1000);
       const context = text.substring(blockStart, searchEnd);
 
       const provider = PROVIDER_REGEX.exec(context)?.[1] || '';
@@ -40,21 +39,23 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
       const number = NUMBER_REGEX.exec(context)?.[1];
 
       const displayName = mnemonic || name;
-      let label: string;
 
+      let label: string;
       if (keyword === 'trigger') {
-        label = `⚡ Trigger: ${provider} / ${displayName}`;
+        label = `━━━ ⚡ TRIGGER: ${provider} / ${displayName} ━━━`;
       } else if (keyword === 'foreach') {
-        label = `🔄 Loop${number ? ` (Step ${number})` : ''}`;
+        label = `━━━ 🔄 LOOP (Step ${number ?? '?'}) ━━━`;
       } else {
-        label = `Step ${number ?? '?'}: ${provider} / ${displayName}`;
+        label = `━━━ Step ${number ?? '?'}: ${provider} / ${displayName} ━━━`;
       }
 
       if (comment) {
-        label += ` — ${comment}`;
+        label += `  « ${comment} »`;
       }
 
-      const range = new vscode.Range(pos, pos);
+      // Place CodeLens at the opening { line
+      const bracePos = document.positionAt(blockStart);
+      const range = new vscode.Range(bracePos, bracePos);
       lenses.push(new vscode.CodeLens(range, {
         title: label,
         command: '',
@@ -63,6 +64,46 @@ class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
 
     return lenses;
   }
+}
+
+/**
+ * Find the opening { that encloses the given offset,
+ * accounting for nested braces and JSON strings.
+ */
+function findEnclosingBrace(text: string, offset: number): number {
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+
+  for (let i = offset; i >= 0; i--) {
+    const ch = text[i];
+
+    // Scanning backward, handle escape sequences in reverse
+    if (inString) {
+      if (ch === '"' && !escape) {
+        inString = false;
+      }
+      // Check if this char is escaped by counting preceding backslashes
+      escape = i > 0 && text[i - 1] === '\\' && !escape;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === '}') {
+      depth++;
+    } else if (ch === '{') {
+      if (depth === 0) {
+        return i;
+      }
+      depth--;
+    }
+  }
+
+  return -1;
 }
 
 export function activateStepCodeLens(context: vscode.ExtensionContext): void {
