@@ -12,8 +12,8 @@ export function activate(context: vscode.ExtensionContext): void {
   // Auto-open readable view when a .recipe.json file is opened
   const onDidOpen = vscode.workspace.onDidOpenTextDocument((doc) => {
     if (doc.uri.fsPath.endsWith('.recipe.json')) {
-      // Small delay to let the editor become active
-      setTimeout(() => openReadableView(), 300);
+      const targetUri = doc.uri;
+      setTimeout(() => openReadableViewForUri(targetUri), 300);
     }
   });
 
@@ -47,6 +47,17 @@ async function openReadableView(): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     vscode.window.showErrorMessage(`Failed to parse recipe: ${message}`);
+  }
+}
+
+async function openReadableViewForUri(uri: vscode.Uri): Promise<void> {
+  try {
+    const doc = await vscode.workspace.openTextDocument(uri);
+    const raw: RawRecipe = JSON.parse(doc.getText());
+    const recipe = parseRecipe(raw);
+    RecipeWebviewPanel.show(recipe, uri);
+  } catch {
+    // Silently ignore parse errors for auto-open
   }
 }
 

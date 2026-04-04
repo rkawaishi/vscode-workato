@@ -213,14 +213,17 @@ function renderInputRow(input: ResolvedInput): string {
 
 function renderInputValue(input: ResolvedInput): string {
   if (input.references.length > 0) {
-    // Highlight pill references in the display value
+    // Highlight pill references in the display value using replaceAll
+    // to handle multiple occurrences of the same stepAlias
     let html = esc(input.displayValue);
+    const replaced = new Set<string>();
     for (const ref of input.references) {
-      const refText = `[${ref.stepAlias}]`;
-      html = html.replace(
-        esc(refText),
-        `<span class="pill-ref">${esc(refText)}</span>`,
-      );
+      const refText = esc(`[${ref.stepAlias}]`);
+      if (replaced.has(refText)) {
+        continue;
+      }
+      replaced.add(refText);
+      html = html.split(refText).join(`<span class="pill-ref">${refText}</span>`);
     }
     return html;
   }

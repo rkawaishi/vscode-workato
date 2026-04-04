@@ -2,7 +2,7 @@ import { PillRef, ResolvedInput } from '../types/workato';
 
 const PILL_PATTERN = /#\{_dp\('(.+?)'\)\}/g;
 const FORMULA_PATTERN = /#\{_\('([^']+)'\)(?:[^}]*)?\}/g;
-const RUBY_FORMULA_PATTERN = /=_\('([^']+)'\)[^"']*/g;
+const RUBY_FORMULA_PATTERN = /=_\('([^']+)'\)(?:\.[a-zA-Z_]\w*)*/g;
 
 /**
  * Parse a single _dp() JSON payload into a PillRef.
