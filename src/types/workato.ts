@@ -68,6 +68,7 @@ export interface RecipeStep {
   inputs: ResolvedInput[];
   children: RecipeStep[];
   source?: ResolvedInput;
+  code?: string;
 }
 
 export interface ResolvedInput {
