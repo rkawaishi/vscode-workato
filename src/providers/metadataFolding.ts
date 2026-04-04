@@ -110,13 +110,15 @@ export function activateMetadataFolding(context: vscode.ExtensionContext): void 
   // Auto-fold metadata sections when a recipe file is opened
   const autoFold = vscode.window.onDidChangeActiveTextEditor((editor) => {
     if (editor?.document.uri.fsPath.endsWith('.recipe.json')) {
-      setTimeout(() => foldMetadataSections(editor), 500);
+      const capturedEditor = editor;
+      setTimeout(() => foldMetadataSections(capturedEditor), 500);
     }
   });
 
   // Also fold for already-open editor
-  if (vscode.window.activeTextEditor?.document.uri.fsPath.endsWith('.recipe.json')) {
-    setTimeout(() => foldMetadataSections(vscode.window.activeTextEditor!), 500);
+  const currentEditor = vscode.window.activeTextEditor;
+  if (currentEditor?.document.uri.fsPath.endsWith('.recipe.json')) {
+    setTimeout(() => foldMetadataSections(currentEditor), 500);
   }
 
   context.subscriptions.push(autoFold);
