@@ -49,6 +49,9 @@ function parseStep(raw: RawStep): RecipeStep {
   const inputObj = raw.input as Record<string, unknown> | undefined;
   const displayName = (inputObj?.mnemonic as string) || raw.name || raw.keyword;
 
+  // Extract embedded Ruby/code if present
+  const code = typeof inputObj?.code === 'string' ? inputObj.code : undefined;
+
   return {
     number: raw.number,
     provider: raw.provider || '',
@@ -59,5 +62,6 @@ function parseStep(raw: RawStep): RecipeStep {
     inputs,
     children,
     source,
+    code,
   };
 }

@@ -27,7 +27,7 @@ export class RecipeWebviewPanel {
       'workatoRecipeView',
       `${recipe.name}`,
       vscode.ViewColumn.Beside,
-      { enableScripts: false },
+      { enableScripts: true },
     );
 
     const instance = new RecipeWebviewPanel(panel, key);
@@ -67,6 +67,7 @@ function renderHtml(recipe: RecipeModel): string {
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 <style>
   body {
     font-family: var(--vscode-font-family, sans-serif);
@@ -120,6 +121,26 @@ function renderHtml(recipe: RecipeModel): string {
   }
   .comment { color: var(--vscode-descriptionForeground); font-size: 0.9em; }
   .nested { margin-top: 4px; }
+  .code-block {
+    margin: 6px 0 2px 0;
+    padding: 8px 10px;
+    background: var(--vscode-editor-background, #1e1e1e);
+    border: 1px solid var(--vscode-panel-border, #444);
+    border-radius: 4px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--vscode-editor-font-size, 12px);
+    line-height: 1.4;
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .code-toggle {
+    font-size: 0.8em;
+    color: var(--vscode-textLink-foreground, #4fc1ff);
+    cursor: pointer;
+    margin-left: 8px;
+  }
 </style>
 </head>
 <body>
@@ -160,6 +181,10 @@ function renderStep(step: RecipeStep): string {
 
   const stepNum = `<span class="step-num" style="color:${color.fg}">Step ${step.number}</span>`;
 
+  const codeHtml = step.code
+    ? `<span class="code-toggle" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">Show code</span><div class="code-block" style="display:none">${esc(step.code)}</div>`
+    : '';
+
   const children = step.children.length > 0
     ? `<ul class="flow nested">${step.children.map(c => renderStep(c)).join('')}</ul>`
     : '';
@@ -167,7 +192,7 @@ function renderStep(step: RecipeStep): string {
   return `<li style="background:${color.bg}">
     <span class="step-label" style="background:${color.fg}; color:#1e1e1e;">${icon} ${kwLabel}</span>
     ${stepNum}
-    <strong>${esc(label)}</strong>${comment}
+    <strong>${esc(label)}</strong>${comment}${codeHtml}
     ${children}
   </li>`;
 }
