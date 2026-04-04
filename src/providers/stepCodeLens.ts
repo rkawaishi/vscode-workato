@@ -7,72 +7,135 @@ const MNEMONIC_REGEX = /"mnemonic"\s*:\s*"([^"]+)"/;
 const COMMENT_REGEX = /"comment"\s*:\s*"([^"]+)"/;
 const NUMBER_REGEX = /"number"\s*:\s*(\d+)/;
 
-class RecipeStepCodeLensProvider implements vscode.CodeLensProvider {
-  provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
-    if (!document.uri.fsPath.endsWith('.recipe.json')) {
-      return [];
-    }
+// Decoration types for each step kind — background + bold label
+const triggerDecorationType = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(229, 192, 123, 0.15)',
+  overviewRulerColor: '#e5c07b',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+  before: {
+    color: '#e5c07b',
+    fontWeight: 'bold',
+  },
+});
 
-    const text = document.getText();
+const actionDecorationType = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(97, 175, 239, 0.12)',
+  overviewRulerColor: '#61afef',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+  before: {
+    color: '#61afef',
+    fontWeight: 'bold',
+  },
+});
 
-    // Pass 1: build a brace stack map — for each offset, track enclosing { offset
-    const braceMap = buildBraceMap(text);
+const foreachDecorationType = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(198, 120, 221, 0.12)',
+  overviewRulerColor: '#c678dd',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+  before: {
+    color: '#c678dd',
+    fontWeight: 'bold',
+  },
+});
 
-    // Pass 2: find "keyword" matches and look up their enclosing {
-    const lenses: vscode.CodeLens[] = [];
-    let match: RegExpExecArray | null;
-    KEYWORD_REGEX.lastIndex = 0;
-
-    while ((match = KEYWORD_REGEX.exec(text)) !== null) {
-      const keyword = match[1];
-      // match.index is at the opening " which is a string delimiter,
-      // so look up the character just before it (whitespace/newline)
-      const braceOffset = braceMap.get(match.index - 1);
-      if (braceOffset === undefined) {
-        continue;
-      }
-
-      // Extract text from the brace for metadata search
-      const blockText = text.substring(braceOffset, Math.min(text.length, match.index + 500));
-
-      const provider = PROVIDER_REGEX.exec(blockText)?.[1] || '';
-      const mnemonic = MNEMONIC_REGEX.exec(blockText)?.[1];
-      const name = NAME_REGEX.exec(blockText)?.[1] || '';
-      const comment = COMMENT_REGEX.exec(blockText)?.[1] || '';
-      const number = NUMBER_REGEX.exec(blockText)?.[1];
-
-      const displayName = mnemonic || name;
-
-      let label: string;
-      if (keyword === 'trigger') {
-        label = `━━━ ⚡ TRIGGER: ${provider} / ${displayName} ━━━`;
-      } else if (keyword === 'foreach') {
-        label = `━━━ 🔄 LOOP (Step ${number ?? '?'}) ━━━`;
-      } else {
-        label = `━━━ Step ${number ?? '?'}: ${provider} / ${displayName} ━━━`;
-      }
-
-      if (comment) {
-        label += `  « ${comment} »`;
-      }
-
-      const bracePos = document.positionAt(braceOffset);
-      const range = new vscode.Range(bracePos, bracePos);
-      lenses.push(new vscode.CodeLens(range, {
-        title: label,
-        command: '',
-      }));
-    }
-
-    return lenses;
+export function activateStepCodeLens(context: vscode.ExtensionContext): void {
+  if (vscode.window.activeTextEditor) {
+    updateStepDecorations(vscode.window.activeTextEditor);
   }
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (editor) {
+        updateStepDecorations(editor);
+      }
+    }),
+    vscode.workspace.onDidChangeTextDocument((e) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor && e.document === editor.document) {
+        updateStepDecorations(editor);
+      }
+    }),
+  );
 }
 
-/**
- * Forward-scan through JSON text to build a map from character offsets
- * to their immediately enclosing { offset.
- * Only maps offsets that are inside an object (not inside a string).
- */
+function updateStepDecorations(editor: vscode.TextEditor): void {
+  if (!editor.document.uri.fsPath.endsWith('.recipe.json')) {
+    editor.setDecorations(triggerDecorationType, []);
+    editor.setDecorations(actionDecorationType, []);
+    editor.setDecorations(foreachDecorationType, []);
+    return;
+  }
+
+  const text = editor.document.getText();
+  const braceMap = buildBraceMap(text);
+
+  const triggerDecos: vscode.DecorationOptions[] = [];
+  const actionDecos: vscode.DecorationOptions[] = [];
+  const foreachDecos: vscode.DecorationOptions[] = [];
+
+  let match: RegExpExecArray | null;
+  KEYWORD_REGEX.lastIndex = 0;
+
+  while ((match = KEYWORD_REGEX.exec(text)) !== null) {
+    const keyword = match[1];
+    const braceOffset = braceMap.get(match.index - 1);
+    if (braceOffset === undefined) {
+      continue;
+    }
+
+    const blockText = text.substring(braceOffset, Math.min(text.length, match.index + 500));
+
+    const provider = PROVIDER_REGEX.exec(blockText)?.[1] || '';
+    const mnemonic = MNEMONIC_REGEX.exec(blockText)?.[1];
+    const name = NAME_REGEX.exec(blockText)?.[1] || '';
+    const comment = COMMENT_REGEX.exec(blockText)?.[1] || '';
+    const number = NUMBER_REGEX.exec(blockText)?.[1];
+
+    const displayName = mnemonic || name;
+
+    let label: string;
+    if (keyword === 'trigger') {
+      label = `⚡ TRIGGER: ${provider} / ${displayName}`;
+    } else if (keyword === 'foreach') {
+      label = `🔄 LOOP (Step ${number ?? '?'})`;
+    } else {
+      label = `▶ Step ${number ?? '?'}: ${provider} / ${displayName}`;
+    }
+
+    if (comment) {
+      label += `  — ${comment}`;
+    }
+
+    const braceLine = editor.document.positionAt(braceOffset).line;
+    const range = new vscode.Range(braceLine, 0, braceLine, 0);
+
+    const deco: vscode.DecorationOptions = {
+      range,
+      renderOptions: {
+        before: {
+          contentText: `  ${label}  `,
+          margin: '0 8px 0 0',
+        },
+      },
+    };
+
+    if (keyword === 'trigger') {
+      triggerDecos.push(deco);
+    } else if (keyword === 'foreach') {
+      foreachDecos.push(deco);
+    } else {
+      actionDecos.push(deco);
+    }
+  }
+
+  editor.setDecorations(triggerDecorationType, triggerDecos);
+  editor.setDecorations(actionDecorationType, actionDecos);
+  editor.setDecorations(foreachDecorationType, foreachDecos);
+}
+
 function buildBraceMap(text: string): Map<number, number> {
   const map = new Map<number, number>();
   const braceStack: number[] = [];
@@ -107,20 +170,10 @@ function buildBraceMap(text: string): Map<number, number> {
       braceStack.pop();
     }
 
-    // Record the enclosing brace for this non-string offset
     if (braceStack.length > 0) {
       map.set(i, braceStack[braceStack.length - 1]);
     }
   }
 
   return map;
-}
-
-export function activateStepCodeLens(context: vscode.ExtensionContext): void {
-  context.subscriptions.push(
-    vscode.languages.registerCodeLensProvider(
-      { pattern: '**/*.recipe.json' },
-      new RecipeStepCodeLensProvider(),
-    ),
-  );
 }
