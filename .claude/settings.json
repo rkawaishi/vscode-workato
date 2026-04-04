@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run compile)",
+      "Bash(npm run watch)",
+      "Bash(npm run lint)",
+      "Bash(npm run test)",
+      "Bash(npm install*)",
+      "Bash(npx tsc*)",
+      "Bash(npx eslint*)",
+      "Bash(code --extensionDevelopmentPath=*)",
+      "Bash(vsce package*)",
+      "Bash(git *)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Bash(vsce publish*)"
+    ]
+  }
+}

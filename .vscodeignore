@@ -1,0 +1,11 @@
+src/**
+node_modules/**
+.claude/**
+tsconfig.json
+**/*.map
+Helpdesk auto reply/**
+Home/**
+MCP | Gmail/**
+Sample project 1/**
+Sample project 2/**
+Sample project 3/**
