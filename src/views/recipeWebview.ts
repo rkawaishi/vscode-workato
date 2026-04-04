@@ -43,7 +43,6 @@ export class RecipeWebviewPanel {
 
   private dispose(): void {
     RecipeWebviewPanel.panels.delete(this.uri);
-    this.panel.dispose();
     for (const d of this.disposables) {
       d.dispose();
     }

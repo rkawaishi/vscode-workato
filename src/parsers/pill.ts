@@ -124,7 +124,7 @@ export function resolveInputs(input: Record<string, unknown>): ResolvedInput[] {
 }
 
 const METADATA_KEYS = new Set([
-  'schema', 'output', 'response_headers', 'inspect',
+  'schema', 'output', 'response_headers', 'inspect', 'mnemonic',
 ]);
 
 function isMetadataKey(key: string): boolean {
