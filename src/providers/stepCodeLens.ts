@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const KEYWORD_REGEX = /"keyword"\s*:\s*"(trigger|action|foreach)"/g;
+const KEYWORD_REGEX = /"keyword"\s*:\s*"(trigger|action|foreach|try|catch)"/g;
 const PROVIDER_REGEX = /"provider"\s*:\s*"([^"]+)"/;
 const NAME_REGEX = /"name"\s*:\s*"([^"]+)"/;
 const MNEMONIC_REGEX = /"mnemonic"\s*:\s*"([^"]+)"/;
@@ -41,6 +41,28 @@ const foreachDecorationType = vscode.window.createTextEditorDecorationType({
   },
 });
 
+const tryDecorationType = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(86, 182, 194, 0.12)',
+  overviewRulerColor: '#56b6c2',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+  before: {
+    color: '#56b6c2',
+    fontWeight: 'bold',
+  },
+});
+
+const catchDecorationType = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: 'rgba(224, 108, 117, 0.12)',
+  overviewRulerColor: '#e06c75',
+  overviewRulerLane: vscode.OverviewRulerLane.Left,
+  before: {
+    color: '#e06c75',
+    fontWeight: 'bold',
+  },
+});
+
 export function activateStepCodeLens(context: vscode.ExtensionContext): void {
   if (vscode.window.activeTextEditor) {
     updateStepDecorations(vscode.window.activeTextEditor);
@@ -66,6 +88,8 @@ function updateStepDecorations(editor: vscode.TextEditor): void {
     editor.setDecorations(triggerDecorationType, []);
     editor.setDecorations(actionDecorationType, []);
     editor.setDecorations(foreachDecorationType, []);
+    editor.setDecorations(tryDecorationType, []);
+    editor.setDecorations(catchDecorationType, []);
     return;
   }
 
@@ -75,6 +99,8 @@ function updateStepDecorations(editor: vscode.TextEditor): void {
   const triggerDecos: vscode.DecorationOptions[] = [];
   const actionDecos: vscode.DecorationOptions[] = [];
   const foreachDecos: vscode.DecorationOptions[] = [];
+  const tryDecos: vscode.DecorationOptions[] = [];
+  const catchDecos: vscode.DecorationOptions[] = [];
 
   let match: RegExpExecArray | null;
   KEYWORD_REGEX.lastIndex = 0;
@@ -101,6 +127,10 @@ function updateStepDecorations(editor: vscode.TextEditor): void {
       label = `⚡ TRIGGER: ${provider} / ${displayName}`;
     } else if (keyword === 'foreach') {
       label = `🔄 LOOP (Step ${number ?? '?'})`;
+    } else if (keyword === 'try') {
+      label = `🛡 TRY`;
+    } else if (keyword === 'catch') {
+      label = `🚨 CATCH`;
     } else {
       label = `▶ Step ${number ?? '?'}: ${provider} / ${displayName}`;
     }
@@ -126,6 +156,10 @@ function updateStepDecorations(editor: vscode.TextEditor): void {
       triggerDecos.push(deco);
     } else if (keyword === 'foreach') {
       foreachDecos.push(deco);
+    } else if (keyword === 'try') {
+      tryDecos.push(deco);
+    } else if (keyword === 'catch') {
+      catchDecos.push(deco);
     } else {
       actionDecos.push(deco);
     }
@@ -134,6 +168,8 @@ function updateStepDecorations(editor: vscode.TextEditor): void {
   editor.setDecorations(triggerDecorationType, triggerDecos);
   editor.setDecorations(actionDecorationType, actionDecos);
   editor.setDecorations(foreachDecorationType, foreachDecos);
+  editor.setDecorations(tryDecorationType, tryDecos);
+  editor.setDecorations(catchDecorationType, catchDecos);
 }
 
 function buildBraceMap(text: string): Map<number, number> {
