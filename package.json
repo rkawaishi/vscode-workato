@@ -31,7 +31,14 @@
           "group": "navigation"
         }
       ]
-    }
+    },
+    "iconThemes": [
+      {
+        "id": "workato-icons",
+        "label": "Workato File Icons",
+        "path": "./resources/workato-icon-theme.json"
+      }
+    ]
   },
   "scripts": {
     "compile": "tsc -p ./",

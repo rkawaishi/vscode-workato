@@ -1,0 +1,41 @@
+{
+  "iconDefinitions": {
+    "_file": {
+      "iconPath": "./icons/json.svg"
+    },
+    "_recipe": {
+      "iconPath": "./icons/recipe.svg"
+    },
+    "_genie": {
+      "iconPath": "./icons/genie.svg"
+    },
+    "_skill": {
+      "iconPath": "./icons/skill.svg"
+    },
+    "_connection": {
+      "iconPath": "./icons/connection.svg"
+    },
+    "_mcp_server": {
+      "iconPath": "./icons/mcp-server.svg"
+    },
+    "_env": {
+      "iconPath": "./icons/env.svg"
+    }
+  },
+  "file": "_file",
+  "fileExtensions": {
+    "recipe.json": "_recipe",
+    "agentic_genie.json": "_genie",
+    "agentic_skill.json": "_skill",
+    "connection.json": "_connection",
+    "mcp_server.json": "_mcp_server",
+    "workatoenv": "_env"
+  },
+  "fileNames": {
+    ".workatoenv": "_env"
+  },
+  "languageIds": {},
+  "light": {},
+  "highContrast": {},
+  "hidesExplorerArrows": false
+}
