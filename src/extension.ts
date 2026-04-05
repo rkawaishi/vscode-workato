@@ -14,30 +14,16 @@ export function activate(context: vscode.ExtensionContext): void {
   activateMetadataFolding(context);
   activateCodeDecorator(context);
 
-  // Manual command to open readable view
+  // Open readable view via editor title button or command palette
   const command = vscode.commands.registerCommand(
     'workato.openReadableView',
-    () => openReadableViewManual(),
+    () => openReadableView(),
   );
 
-  // Auto-open readable view when a .recipe.json file is opened
-  const onDidOpen = vscode.workspace.onDidOpenTextDocument((doc) => {
-    if (doc.uri.fsPath.endsWith('.recipe.json')) {
-      const targetUri = doc.uri;
-      setTimeout(() => openReadableViewForUri(targetUri), 300);
-    }
-  });
-
-  const activeEditor = vscode.window.activeTextEditor;
-  if (activeEditor?.document.uri.fsPath.endsWith('.recipe.json')) {
-    const targetUri = activeEditor.document.uri;
-    setTimeout(() => openReadableViewForUri(targetUri), 300);
-  }
-
-  context.subscriptions.push(command, onDidOpen);
+  context.subscriptions.push(command);
 }
 
-async function openReadableViewManual(): Promise<void> {
+async function openReadableView(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
     vscode.window.showWarningMessage('No active editor. Open a .recipe.json file first.');
@@ -58,17 +44,6 @@ async function openReadableViewManual(): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     vscode.window.showErrorMessage(`Failed to parse recipe: ${message}`);
-  }
-}
-
-async function openReadableViewForUri(uri: vscode.Uri): Promise<void> {
-  try {
-    const doc = await vscode.workspace.openTextDocument(uri);
-    const raw: RawRecipe = JSON.parse(doc.getText());
-    const recipe = parseRecipe(raw);
-    RecipeWebviewPanel.show(recipe, uri);
-  } catch {
-    // Silently ignore parse errors for auto-open
   }
 }
 
